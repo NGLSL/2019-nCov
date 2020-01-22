@@ -1,0 +1,23 @@
+spring:
+  mail:
+    host: smtp.163.com
+    username: xx@163.com
+    password: 123
+    protocol: smtp
+    properties.mail.smtp.auth: true
+    properties.mail.smtp.port: 465
+    properties.mail.smtp.starttls.enable: true
+    properties.mail.smtp.starttls.required: true
+    properties.mail.smtp.ssl.enable: true
+    properties.mail.display.sendname: Autoalarm
+    default-encoding: utf-8
+
+logging:
+  config: classpath:log4j2.xml
+
+custom:
+  url: https://3g.dxy.cn/newh5/view/pneumonia
+  from: xx@163.com
+  to:
+    - xx@qq.com
+  cron: 0/30 * * * * ?
