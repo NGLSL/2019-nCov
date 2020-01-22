@@ -53,7 +53,7 @@ public class SendEmailJob {
         final Node childNode = node.childNode(1);
         final String title = childNode.outerHtml();
 
-        if (exists(title, "new-title.txt")) {
+        if (exists(title)) {
             log.info("检查完毕，暂无新消息");
             return;
         }
@@ -89,8 +89,8 @@ public class SendEmailJob {
         return descs;
     }
 
-    private boolean exists(String description, String s) throws IOException {
-        final Path path = Paths.get("/tmp/mail/", s);
+    private boolean exists(String description) throws IOException {
+        final Path path = Paths.get(config.getPath(), config.getFileName());
         final boolean exists = Files.exists(path);
         if (exists) {
             final byte[] bytes = Files.readAllBytes(path);

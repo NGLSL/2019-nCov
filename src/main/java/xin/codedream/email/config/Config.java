@@ -16,4 +16,6 @@ public class Config {
     private String from;
     private String[] to;
     private String cron;
+    private String path;
+    private String fileName;
 }

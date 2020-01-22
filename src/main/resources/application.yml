@@ -21,3 +21,5 @@ custom:
   to:
     - xx@qq.com
   cron: 0/30 * * * * ?
+  path: /tmp/mail/
+  fileName: new-title.txt
