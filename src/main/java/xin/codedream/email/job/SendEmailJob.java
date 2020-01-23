@@ -55,7 +55,7 @@ public class SendEmailJob {
         final String title = titleContentNode.outerHtml();
 
         if (exists(title)) {
-            log.info("检查完毕，暂无新消`息");
+            log.info("检查完毕，暂无新消息");
             return;
         }
 
