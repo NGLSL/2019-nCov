@@ -48,33 +48,34 @@ public class SendEmailJob {
                 .header("cache-control", "no-cache")
                 .get();
         final Elements tabRight = document.getElementsByClass("tabRight___3Z0eJ");
-        final Element topicTitle = tabRight.get(0);
-        final Node node = topicTitle.childNode(0);
-        final Node childNode = node.childNode(1);
-        final String title = childNode.outerHtml();
+        final Element newsElement = tabRight.first();
+        final Node titleNode = newsElement.childNode(0);
+        // 获取标题内容
+        final Node titleContentNode = titleNode.childNode(1);
+        final String title = titleContentNode.outerHtml();
 
         if (exists(title)) {
-            log.info("检查完毕，暂无新消息");
+            log.info("检查完毕，暂无新消`息");
             return;
         }
 
         final Elements mapBox = document.getElementsByClass("mapTitle___2QtRg");
         final Elements confirmedNumber = document.getElementsByClass("confirmedNumber___3WrF5");
-        final Elements descBoxElements = document.getElementsByClass("descBox___3dfIo").get(0).getElementsByClass("descList___3iOuI");
-        Elements mapTopElements = document.getElementsByClass("mapTop___2VZCl").get(0).getElementsByClass("descList___3iOuI");
+        final Elements descBoxElements = document.getElementsByClass("descBox___3dfIo").first().getElementsByClass("descList___3iOuI");
+        Elements mapTopElements = document.getElementsByClass("mapTop___2VZCl").first().getElementsByClass("descList___3iOuI");
 
         final Elements mapImg = document.getElementsByClass("mapImg___3LuBG");
         List<String> descList = getDescList(descBoxElements);
         List<String> mapTopDescList = getDescList(mapTopElements);
         Context context = new Context();
         context.setVariable("title", title);
-        context.setVariable("time", mapBox.get(0).text());
-        context.setVariable("confirmedNumber", confirmedNumber.get(0).text());
+        context.setVariable("time", mapBox.first().text());
+        context.setVariable("confirmedNumber", confirmedNumber.first().text());
         context.setVariable("mapTopDescList", mapTopDescList);
         context.setVariable("descList", descList);
-        context.setVariable("img", mapImg.get(0).attr("src"));
-        context.setVariable("content", tabRight.get(1).getElementsByClass("topicContent___1KVfy").get(0).text());
-        context.setVariable("origin", tabRight.get(1).getElementsByClass("topicFrom___3xlna").get(0).text());
+        context.setVariable("img", mapImg.first().attr("src"));
+        context.setVariable("content", newsElement.getElementsByClass("topicContent___1KVfy").first().text());
+        context.setVariable("origin", newsElement.getElementsByClass("topicFrom___3xlna").first().text());
         String msg = templateEngine.process("msg", context);
         sendMegService.sendMsg(config.getTo(), config.getFrom(), title, msg);
         log.info("检查完毕");
