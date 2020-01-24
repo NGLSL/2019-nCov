@@ -30,15 +30,6 @@
             </ul>
         </div>
         <div>
-            <div>疫情地图： <img class="img" th:src="${img}"/>
-            </div>
-            <div>
-                <ul>
-                    <li th:each="desc:${descList}" th:text="${desc}"></li>
-                </ul>
-            </div>
-        </div>
-        <div>
             <div th:text="${content}"></div>
             <div><p style="text-align:right" th:text="${origin}"></p></div>
         </div>

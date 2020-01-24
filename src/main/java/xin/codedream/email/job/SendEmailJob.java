@@ -1,5 +1,6 @@
 package xin.codedream.email.job;
 
+import jdk.nashorn.api.scripting.ScriptObjectMirror;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -15,12 +16,16 @@ import xin.codedream.email.config.Config;
 import xin.codedream.email.service.SendMegService;
 
 import javax.mail.MessagingException;
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author LeiXinXin
@@ -41,41 +46,40 @@ public class SendEmailJob {
     }
 
     @Scheduled(cron = "#{config.cron}")
-    public void check() throws IOException, MessagingException {
+    public void check() throws IOException, MessagingException, ScriptException {
         log.info("开始检查最新动态");
         final Document document = Jsoup.connect(config.getUrl())
                 .timeout(30000)
                 .header("cache-control", "no-cache")
                 .get();
-        final Elements tabRight = document.getElementsByClass("tabRight___3Z0eJ");
-        final Element newsElement = tabRight.first();
-        final Node titleNode = newsElement.childNode(0);
-        // 获取标题内容
-        final Node titleContentNode = titleNode.childNode(1);
-        final String title = titleContentNode.outerHtml();
+        Elements mapBoxElement = document.getElementsByClass("mapBox___qoGhu");
+        Element mapTopElement = mapBoxElement.first();
+        final Element timeElement = mapTopElement.getElementsByClass("mapTitle___2QtRg").first();
+        String time = timeElement.text();
+        Element confirmedNumberElement = mapTopElement.getElementsByClass("confirmedNumber___3WrF5").first();
+        String confirmedNumber = confirmedNumberElement.text();
+        Elements mapDescListElement = mapTopElement.getElementsByClass("descList___3iOuI");
+        List<String> mapDescList = mapDescListElement.stream().map(Element::text).collect(Collectors.toList());
+        Element timelineService = document.getElementById("getTimelineService");
+        String timelineJs = "function timeline() {var window = {getTimelineService:0}; " + timelineService.html() + "  return window.getTimelineService;} timeline()";
+        ScriptEngine engine = new ScriptEngineManager().getEngineByName("nashorn");
+        ScriptObjectMirror eval = (ScriptObjectMirror) engine.eval(timelineJs);
+        ScriptObjectMirror first = (ScriptObjectMirror) eval.get("0");
+        String title = first.get("title").toString();
+        String content = first.get("summary").toString();
+        String origin = first.get("infoSource").toString();
 
         if (exists(title)) {
             log.info("检查完毕，暂无新消息");
             return;
         }
-
-        final Elements mapBox = document.getElementsByClass("mapTitle___2QtRg");
-        final Elements confirmedNumber = document.getElementsByClass("confirmedNumber___3WrF5");
-        final Elements descBoxElements = document.getElementsByClass("descBox___3dfIo").first().getElementsByClass("descList___3iOuI");
-        Elements mapTopElements = document.getElementsByClass("mapTop___2VZCl").first().getElementsByClass("descList___3iOuI");
-
-        final Elements mapImg = document.getElementsByClass("mapImg___3LuBG");
-        List<String> descList = getDescList(descBoxElements);
-        List<String> mapTopDescList = getDescList(mapTopElements);
         Context context = new Context();
         context.setVariable("title", title);
-        context.setVariable("time", mapBox.first().text());
-        context.setVariable("confirmedNumber", confirmedNumber.first().text());
-        context.setVariable("mapTopDescList", mapTopDescList);
-        context.setVariable("descList", descList);
-        context.setVariable("img", mapImg.first().attr("src"));
-        context.setVariable("content", newsElement.getElementsByClass("topicContent___1KVfy").first().text());
-        context.setVariable("origin", newsElement.getElementsByClass("topicFrom___3xlna").first().text());
+        context.setVariable("time", time);
+        context.setVariable("confirmedNumber", confirmedNumber);
+        context.setVariable("mapTopDescList", mapDescList);
+        context.setVariable("content", content);
+        context.setVariable("origin", origin);
         String msg = templateEngine.process("msg", context);
         sendMegService.sendMsg(config.getTo(), config.getFrom(), title, msg);
         log.info("检查完毕");
