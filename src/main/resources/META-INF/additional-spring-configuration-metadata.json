@@ -29,6 +29,11 @@
       "name": "custom.fileName",
       "type": "java.lang.String",
       "description": "Description for custom.fileName."
+    },
+    {
+      "name": "custom.userAgent",
+      "type": "java.lang.String",
+      "description": "Description for custom.userAgent."
     }
   ]
 }

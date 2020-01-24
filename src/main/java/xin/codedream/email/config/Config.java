@@ -18,4 +18,5 @@ public class Config {
     private String cron;
     private String path;
     private String fileName;
+    private String userAgent;
 }

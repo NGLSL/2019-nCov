@@ -18,5 +18,4 @@ public class EmailApplication {
         SpringApplication.run(EmailApplication.class, args);
         log.info("初始化邮箱：{}", config.getFrom());
     }
-
 }

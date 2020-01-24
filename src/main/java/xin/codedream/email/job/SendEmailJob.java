@@ -1,18 +1,23 @@
 package xin.codedream.email.job;
 
-import jdk.nashorn.api.scripting.ScriptObjectMirror;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.jsoup.nodes.Node;
 import org.jsoup.select.Elements;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.util.FileCopyUtils;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 import xin.codedream.email.config.Config;
+import xin.codedream.email.model.AreaStat;
+import xin.codedream.email.model.Statistics;
+import xin.codedream.email.model.TimeLine;
 import xin.codedream.email.service.SendMegService;
 
 import javax.mail.MessagingException;
@@ -20,12 +25,15 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.function.BiConsumer;
 
 /**
  * @author LeiXinXin
@@ -38,11 +46,39 @@ public class SendEmailJob {
     private final SendMegService sendMegService;
     private final TemplateEngine templateEngine;
     private final Config config;
+    private ScriptEngine engine;
+    private String areaStatTemplate;
+    private String statisticsTemplate;
+    private String timeLineTemplate;
+    private ObjectMapper objectMapper;
 
-    public SendEmailJob(SendMegService sendMegService, TemplateEngine templateEngine, Config config) {
+    public SendEmailJob(SendMegService sendMegService, TemplateEngine templateEngine, Config config) throws IOException {
         this.sendMegService = sendMegService;
         this.templateEngine = templateEngine;
         this.config = config;
+        init();
+    }
+
+    private void init() throws IOException {
+        objectMapper = new ObjectMapper();
+        objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+
+        engine = new ScriptEngineManager().getEngineByName("nashorn");
+
+        areaStatTemplate = readFile("templates/js/AreaStat.js");
+        statisticsTemplate = readFile("templates/js/Statistics.js");
+        timeLineTemplate = readFile("templates/js/TimeLine.js");
+    }
+
+    private String readFile(String s) throws IOException {
+        ClassPathResource classPathResource = new ClassPathResource(s);
+        StringBuilder sb = new StringBuilder();
+
+        try (InputStream inputStream = classPathResource.getInputStream()) {
+            byte[] bytes = FileCopyUtils.copyToByteArray(inputStream);
+            sb.append(new String(bytes));
+        }
+        return sb.toString();
     }
 
     @Scheduled(cron = "#{config.cron}")
@@ -51,37 +87,32 @@ public class SendEmailJob {
         final Document document = Jsoup.connect(config.getUrl())
                 .timeout(30000)
                 .header("cache-control", "no-cache")
+                .header("user-agent", config.getUserAgent())
                 .get();
-        Elements mapBoxElement = document.getElementsByClass("mapBox___qoGhu");
-        Element mapTopElement = mapBoxElement.first();
-        final Element timeElement = mapTopElement.getElementsByClass("mapTitle___2QtRg").first();
-        String time = timeElement.text();
-        Element confirmedNumberElement = mapTopElement.getElementsByClass("confirmedNumber___3WrF5").first();
-        String confirmedNumber = confirmedNumberElement.text();
-        Elements mapDescListElement = mapTopElement.getElementsByClass("descList___3iOuI");
-        List<String> mapDescList = mapDescListElement.stream().map(Element::text).collect(Collectors.toList());
         Element timelineService = document.getElementById("getTimelineService");
-        String timelineJs = "function timeline() {var window = {getTimelineService:0}; " + timelineService.html() + "  return window.getTimelineService;} timeline()";
-        ScriptEngine engine = new ScriptEngineManager().getEngineByName("nashorn");
-        ScriptObjectMirror eval = (ScriptObjectMirror) engine.eval(timelineJs);
-        ScriptObjectMirror first = (ScriptObjectMirror) eval.get("0");
-        String title = first.get("title").toString();
-        String content = first.get("summary").toString();
-        String origin = first.get("infoSource").toString();
-
-        if (exists(title)) {
+        Element areaStatService = document.getElementById("getAreaStat");
+        Element statisticsService = document.getElementById("getStatisticsService");
+        String newTimeLineTemplate = timeLineTemplate.replace("{js}", timelineService.html());
+        String newAreaStatTemplate = areaStatTemplate.replace("{js}", areaStatService.html());
+        String newStatisticsTemplate = statisticsTemplate.replace("{js}", statisticsService.html());
+        TimeLine timeLine = objectMapper.readValue(engine.eval(newTimeLineTemplate).toString(), TimeLine.class);
+        List<AreaStat> areaStats = (List<AreaStat>) objectMapper.readValue(engine.eval(newAreaStatTemplate).toString(), List.class).stream()
+                .collect(ArrayList::new, (BiConsumer<List<AreaStat>, Map<String, Object>>) (areaStats1, stringObjectMap) -> {
+                    AreaStat areaStat = objectMapper.convertValue(stringObjectMap, AreaStat.class);
+                    areaStats1.add(areaStat);
+                }, (BiConsumer<List<AreaStat>, List<AreaStat>>) List::addAll);
+        Statistics statistics = objectMapper.readValue(engine.eval(newStatisticsTemplate).toString(), Statistics.class);
+        statistics.setTime(new Date(statistics.getModifyTime()));
+        if (exists(timeLine.getTitle())) {
             log.info("检查完毕，暂无新消息");
             return;
         }
         Context context = new Context();
-        context.setVariable("title", title);
-        context.setVariable("time", time);
-        context.setVariable("confirmedNumber", confirmedNumber);
-        context.setVariable("mapTopDescList", mapDescList);
-        context.setVariable("content", content);
-        context.setVariable("origin", origin);
+        context.setVariable("statistics", statistics);
+        context.setVariable("areaStats", areaStats);
+        context.setVariable("timeLine", timeLine);
         String msg = templateEngine.process("msg", context);
-        sendMegService.sendMsg(config.getTo(), config.getFrom(), title, msg);
+        sendMegService.sendMsg(config.getTo(), config.getFrom(), timeLine.getTitle(), msg);
         log.info("检查完毕");
     }
 

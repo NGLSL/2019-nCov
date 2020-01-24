@@ -2,36 +2,70 @@
 <html lang="zh" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport"
-          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+          name="viewport">
     <title>Title</title>
-    <style>
-        body {
-            margin: 10px;
-        }
-
-        .img {
-            width: 100%;
-            height: 100%;
-            margin: 0 auto;
-            display: block;
-        }
-    </style>
+<!--    <link href="https://www.layuicdn.com/layui/css/layui.css" rel="stylesheet" type="text/css"/>-->
 </head>
-<body>
-<h1 th:text="${title}"></h1>
+<body style="margin: 10px;">
 <div>
-    <div>
-        <div><p th:text="${time}"></p></div>
-        <div><span th:text="${confirmedNumber}"></span></div>
-        <div>
-            <ul>
-                <li th:each="desc:${mapTopDescList}" th:text="${desc}"></li>
-            </ul>
+    <h1 th:text="${timeLine.getTitle()}"></h1>
+</div>
+<div style="position: relative;margin: 0 auto;padding: 0 15px;box-sizing: border-box;">
+    <div style="line-height: 26px;">
+        <div style="width:100%;margin: 10px auto;">
+            <p th:text="'截止 ' + ${#dates.format(statistics.getTime(), 'yyyy-MM-dd HH:mm:ss')} + '(北京时间) 数据统计'"></p>
         </div>
-        <div>
-            <div th:text="${content}"></div>
-            <div><p style="text-align:right" th:text="${origin}"></p></div>
+        <div style="margin: 10px auto;width: 100%;"><span th:text="${statistics.getCountRemark()}"></span></div>
+        <div style="margin: 10px auto;width: 100%;">
+            <ul style="width: 100%;">
+                <li th:text="'传染源: ' + ${statistics.getInfectSource()}"></li>
+                <li th:text="'病毒: : ' + ${statistics.getVirus()}"></li>
+                <li th:text="'传播途径: ' + ${statistics.getPassWay()}"></li>
+                <li th:text="${statistics.getRemark1()}"></li>
+                <li th:text="${statistics.getRemark2()}"></li>
+            </ul>
+            <div  style="width: 100%;margin: 10px auto;">
+                疫情地图：<img style="width: 100%;height: 100%;margin: 0 auto;display: block;"
+                          th:src="${statistics.getImgUrl()}">
+            </div>
+            <div style="width: 100%;margin: 10px auto;">
+                趋势图：<img style="width: 100%;height: 100%;margin: 0 auto;display: block;"
+                         th:src="${statistics.getDailyPic()}">
+            </div>
+        </div>
+    </div>
+    <div>
+        <div style="margin: 10px auto;width: 100%;">
+            <table style="width: 100%;background-color: #fff;color: #666;margin: 10px 0;border-collapse: collapse;border-spacing: 0;">
+                <thead>
+                <tr style="background-color: #f2f2f2;">
+                    <th style="border-width: 1px;border-style: solid;border-color: #e6e6e6;position:relative;padding:9px 15px;min-height:20px;line-height:20px;font-size:14px">地区</th>
+                    <th style="border-width: 1px;border-style: solid;border-color: #e6e6e6;position:relative;padding:9px 15px;min-height:20px;line-height:20px;font-size:14px">确诊</th>
+                    <th style="border-width: 1px;border-style: solid;border-color: #e6e6e6;position:relative;padding:9px 15px;min-height:20px;line-height:20px;font-size:14px">怀疑</th>
+                    <th style="border-width: 1px;border-style: solid;border-color: #e6e6e6;position:relative;padding:9px 15px;min-height:20px;line-height:20px;font-size:14px">死亡</th>
+                    <th style="border-width: 1px;border-style: solid;border-color: #e6e6e6;position:relative;padding:9px 15px;min-height:20px;line-height:20px;font-size:14px">治愈</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="area:${areaStats}" style="background-color: #f2f2f2;">
+                    <td style="border-width: 1px;border-style: solid;border-color: #e6e6e6;position:relative;padding:9px 15px;min-height:20px;line-height:20px;font-size:14px" th:text="${area.getProvinceShortName()}"></td>
+                    <td style="border-width: 1px;border-style: solid;border-color: #e6e6e6;position:relative;padding:9px 15px;min-height:20px;line-height:20px;font-size:14px" th:text="${area.getConfirmedCount()}"></td>
+                    <td style="border-width: 1px;border-style: solid;border-color: #e6e6e6;position:relative;padding:9px 15px;min-height:20px;line-height:20px;font-size:14px" th:text="${area.getSuspectedCount()}"></td>
+                    <td style="border-width: 1px;border-style: solid;border-color: #e6e6e6;position:relative;padding:9px 15px;min-height:20px;line-height:20px;font-size:14px" th:text="${area.getDeadCount()}"></td>
+                    <td style="border-width: 1px;border-style: solid;border-color: #e6e6e6;position:relative;padding:9px 15px;min-height:20px;line-height:20px;font-size:14px" th:text="${area.getCuredCount()}"></td>
+                </tr>
+                </tbody>
+            </table>
+            <div style="margin: 10px auto;width: 100%;" th:text="${statistics.getGeneralRemark()}"></div>
+        </div>
+    </div>
+    <div style="line-height: 26px;">
+        <div style="margin: 10px auto;width: 100%;">
+            <span style="display: block; margin: 10px auto;">最新报道：</span>
+            <p th:text="${timeLine.getSummary()}"></p>
+            <a style="text-align: right;display: block;" th:href="${timeLine.getSourceUrl()}"
+               th:text="'信息来源：' + ${timeLine.getInfoSource()}"></a>
         </div>
     </div>
 </div>
