@@ -5,6 +5,12 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import xin.codedream.email.config.Config;
 
+/**
+ * Start Application
+ *
+ * @author LeiXinXin
+ * @date 2020/1/22
+ */
 @SpringBootApplication
 @Slf4j
 public class EmailApplication {

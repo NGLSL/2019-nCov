@@ -6,7 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -70,15 +69,12 @@ public class SendEmailJob {
         timeLineTemplate = readFile("templates/js/TimeLine.js");
     }
 
-    private String readFile(String s) throws IOException {
-        ClassPathResource classPathResource = new ClassPathResource(s);
-        StringBuilder sb = new StringBuilder();
-
+    private String readFile(String path) throws IOException {
+        ClassPathResource classPathResource = new ClassPathResource(path);
         try (InputStream inputStream = classPathResource.getInputStream()) {
             byte[] bytes = FileCopyUtils.copyToByteArray(inputStream);
-            sb.append(new String(bytes));
+            return new String(bytes);
         }
-        return sb.toString();
     }
 
     @Scheduled(cron = "#{config.cron}")
@@ -96,7 +92,8 @@ public class SendEmailJob {
         String newAreaStatTemplate = areaStatTemplate.replace("{js}", areaStatService.html());
         String newStatisticsTemplate = statisticsTemplate.replace("{js}", statisticsService.html());
         TimeLine timeLine = objectMapper.readValue(engine.eval(newTimeLineTemplate).toString(), TimeLine.class);
-        List<AreaStat> areaStats = (List<AreaStat>) objectMapper.readValue(engine.eval(newAreaStatTemplate).toString(), List.class).stream()
+        @SuppressWarnings("unchecked") List<AreaStat> areaStats = (List<AreaStat>) objectMapper.readValue(engine.eval(newAreaStatTemplate).toString(), List.class)
+                .stream()
                 .collect(ArrayList::new, (BiConsumer<List<AreaStat>, Map<String, Object>>) (areaStats1, stringObjectMap) -> {
                     AreaStat areaStat = objectMapper.convertValue(stringObjectMap, AreaStat.class);
                     areaStats1.add(areaStat);
@@ -114,15 +111,6 @@ public class SendEmailJob {
         String msg = templateEngine.process("msg", context);
         sendMegService.sendMsg(config.getTo(), config.getFrom(), timeLine.getTitle(), msg);
         log.info("检查完毕");
-    }
-
-    private List<String> getDescList(Elements descBoxElements) {
-        List<String> descs = new ArrayList<>();
-        Elements elements = descBoxElements.next();
-        for (Element element : elements) {
-            descs.add(element.text());
-        }
-        return descs;
     }
 
     private boolean exists(String description) throws IOException {
