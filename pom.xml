@@ -58,7 +58,7 @@
     </dependencies>
 
     <build>
-        <finalName>nCov</finalName>
+        <finalName>ncov</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
