@@ -9,10 +9,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>xin.codedream</groupId>
-    <artifactId>email</artifactId>
+    <artifactId>2019-nCov</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>email</name>
-    <description>邮箱提醒</description>
+    <name>2019-nCov</name>
+    <description>2019-nCov最新动态推送系统</description>
 
     <properties>
         <java.version>1.8</java.version>
@@ -55,21 +55,10 @@
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.junit.vintage</groupId>
-                    <artifactId>junit-vintage-engine</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
     </dependencies>
 
     <build>
-        <finalName>mail</finalName>
+        <finalName>nCov</finalName>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

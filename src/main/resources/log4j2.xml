@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="WARN" monitorInterval="30">
     <Properties>
-        <Property name="log-path">/tmp/mail/logs</Property>
-        <Property name="PID">/tmpw/mail/logs/email.pid</Property>
+        <Property name="log-path">/tmp/ncov/logs</Property>
+        <Property name="PID">/tmpw/ncov/logs/ncov.pid</Property>
         <Property name="LOG_EXCEPTION_CONVERSION_WORD">%xwEx</Property>
         <Property name="LOG_LEVEL_PATTERN">%-5level</Property>
         <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} ${LOG_LEVEL_PATTERN} %class{36} %L %M - %msg%xEx%n
@@ -12,7 +12,7 @@
         <Console name="Console" target="SYSTEM_OUT" follow="true">
             <PatternLayout pattern="${LOG_PATTERN}"/>
         </Console>
-        <RollingFile name="File" fileName="${log-path}/email.log"
+        <RollingFile name="File" fileName="${log-path}/ncov.log"
                      filePattern="RollingFiles/$${date:yyyy-MM}/email-%d{yyyy-MM-dd-HH}-%i.log.gz">
             <PatternLayout>
                 <Pattern>${LOG_PATTERN}</Pattern>
@@ -23,7 +23,7 @@
         </RollingFile>
     </Appenders>
     <Loggers>
-        <logger name="xin.codedream.email.EmailApplication" level="INFO"/>
+        <logger name="xin.codedream.ncov" level="INFO"/>
         <Root level="INFO">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="File"/>

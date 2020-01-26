@@ -1,4 +1,4 @@
-package xin.codedream.email.model;
+package xin.codedream.ncov.model;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;

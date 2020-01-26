@@ -1,4 +1,4 @@
-package xin.codedream.email.config;
+package xin.codedream.ncov.config;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

@@ -1,4 +1,4 @@
-package xin.codedream.email.job;
+package xin.codedream.ncov.job;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -13,11 +13,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.FileCopyUtils;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
-import xin.codedream.email.config.Config;
-import xin.codedream.email.model.AreaStat;
-import xin.codedream.email.model.Statistics;
-import xin.codedream.email.model.TimeLine;
-import xin.codedream.email.service.SendMegService;
+import xin.codedream.ncov.config.Config;
+import xin.codedream.ncov.model.AreaStat;
+import xin.codedream.ncov.model.Statistics;
+import xin.codedream.ncov.model.TimeLine;
+import xin.codedream.ncov.service.PushMessageService;
 
 import javax.mail.MessagingException;
 import javax.script.ScriptEngine;
@@ -32,7 +32,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiConsumer;
 
 /**
  * @author LeiXinXin
@@ -42,7 +41,7 @@ import java.util.function.BiConsumer;
 @EnableScheduling
 @Slf4j
 public class SendEmailJob {
-    private final SendMegService sendMegService;
+    private final PushMessageService pushMessageService;
     private final TemplateEngine templateEngine;
     private final Config config;
     private ScriptEngine engine;
@@ -51,8 +50,8 @@ public class SendEmailJob {
     private String timeLineTemplate;
     private ObjectMapper objectMapper;
 
-    public SendEmailJob(SendMegService sendMegService, TemplateEngine templateEngine, Config config) throws IOException {
-        this.sendMegService = sendMegService;
+    public SendEmailJob(PushMessageService pushMessageService, TemplateEngine templateEngine, Config config) throws IOException {
+        this.pushMessageService = pushMessageService;
         this.templateEngine = templateEngine;
         this.config = config;
         init();
@@ -61,15 +60,16 @@ public class SendEmailJob {
     private void init() throws IOException {
         objectMapper = new ObjectMapper();
         objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-
+        // JavaScript Engine
         engine = new ScriptEngineManager().getEngineByName("nashorn");
 
-        areaStatTemplate = readFile("templates/js/AreaStat.js");
-        statisticsTemplate = readFile("templates/js/Statistics.js");
-        timeLineTemplate = readFile("templates/js/TimeLine.js");
+        // JavaScript Templates
+        areaStatTemplate = readFileContent("templates/js/AreaStat.js");
+        statisticsTemplate = readFileContent("templates/js/Statistics.js");
+        timeLineTemplate = readFileContent("templates/js/TimeLine.js");
     }
 
-    private String readFile(String path) throws IOException {
+    private String readFileContent(String path) throws IOException {
         ClassPathResource classPathResource = new ClassPathResource(path);
         try (InputStream inputStream = classPathResource.getInputStream()) {
             byte[] bytes = FileCopyUtils.copyToByteArray(inputStream);
@@ -78,7 +78,7 @@ public class SendEmailJob {
     }
 
     @Scheduled(cron = "#{config.cron}")
-    public void check() throws IOException, MessagingException, ScriptException {
+    public void check() throws IOException, ScriptException, MessagingException {
         log.info("开始检查最新动态");
         final Document document = Jsoup.connect(config.getUrl())
                 .timeout(30000)
@@ -92,12 +92,12 @@ public class SendEmailJob {
         String newAreaStatTemplate = areaStatTemplate.replace("{js}", areaStatService.html());
         String newStatisticsTemplate = statisticsTemplate.replace("{js}", statisticsService.html());
         TimeLine timeLine = objectMapper.readValue(engine.eval(newTimeLineTemplate).toString(), TimeLine.class);
-        @SuppressWarnings("unchecked") List<AreaStat> areaStats = (List<AreaStat>) objectMapper.readValue(engine.eval(newAreaStatTemplate).toString(), List.class)
-                .stream()
-                .collect(ArrayList::new, (BiConsumer<List<AreaStat>, Map<String, Object>>) (areaStats1, stringObjectMap) -> {
-                    AreaStat areaStat = objectMapper.convertValue(stringObjectMap, AreaStat.class);
-                    areaStats1.add(areaStat);
-                }, (BiConsumer<List<AreaStat>, List<AreaStat>>) List::addAll);
+        List<Object> objectList = objectMapper.readValue(engine.eval(newAreaStatTemplate).toString(), List.class);
+        List<AreaStat> areaStats = objectList.stream().collect(ArrayList::new, (arrayList, object) -> {
+            Map<String, Object> map = (Map<String, Object>) object;
+            AreaStat areaStat = objectMapper.convertValue(map, AreaStat.class);
+            arrayList.add(areaStat);
+        }, List::addAll);
         Statistics statistics = objectMapper.readValue(engine.eval(newStatisticsTemplate).toString(), Statistics.class);
         statistics.setTime(new Date(statistics.getModifyTime()));
         if (exists(timeLine.getTitle())) {
@@ -109,21 +109,21 @@ public class SendEmailJob {
         context.setVariable("areaStats", areaStats);
         context.setVariable("timeLine", timeLine);
         String msg = templateEngine.process("msg", context);
-        sendMegService.sendMsg(config.getTo(), config.getFrom(), timeLine.getTitle(), msg);
+        pushMessageService.push(timeLine.getTitle(), msg);
         log.info("检查完毕");
     }
 
-    private boolean exists(String description) throws IOException {
+    private boolean exists(String title) throws IOException {
         final Path path = Paths.get(config.getPath(), config.getFileName());
         final boolean exists = Files.exists(path);
         if (exists) {
             final byte[] bytes = Files.readAllBytes(path);
             final String fileContent = new String(bytes);
-            if (description.equals(fileContent)) {
+            if (title.equals(fileContent)) {
                 return true;
             }
         }
-        Files.write(path, description.getBytes());
+        Files.write(path, title.getBytes());
         return false;
     }
 
